@@ -21,7 +21,7 @@ class Catagory(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.name
+        return self.slug
 
 
 class Product(models.Model):
