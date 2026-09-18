@@ -27,7 +27,7 @@ class Catagory(models.Model):
 class Product(models.Model):
     id = models.UUIDField(editable=False, primary_key=True, default=uuid4)
     name = models.CharField(max_length=200)
-    slug = models.CharField(max_length=200, unique=True, db_index=True)
+    slug = models.CharField(max_length=200, unique=True, db_index=True,null=True,blank=True)
     catagory = models.ForeignKey(
         Catagory, on_delete=models.CASCADE, related_name="products"
     )
