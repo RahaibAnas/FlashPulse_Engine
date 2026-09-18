@@ -1,34 +1,105 @@
-# ⚡ High-Throughput E-Commerce Flash Sale & Inventory Engine
+# ⚡ FlashPulse Engine
 
-A production-oriented Django REST API designed to handle **high-concurrency flash sales**, prevent **inventory overselling**, and process checkout workflows asynchronously.
+> **High-Concurrency E-Commerce Flash Sale & Inventory Engine**
 
-The project is being built incrementally, starting with a clean Django/DRF foundation and evolving toward a distributed architecture using **PostgreSQL, Redis, Celery, Docker, and Nginx**.
+FlashPulse Engine is a **Django REST Framework backend** designed to explore how e-commerce systems can safely handle **high-concurrency flash-sale traffic**, prevent **inventory overselling**, and process order workflows asynchronously.
 
-> **Project Status:** 🚧 In Development — Phase 1
-> **Current Database:** SQLite
-> **Target Database:** PostgreSQL
+The project starts as a Django + DRF monolith and progressively evolves toward a production-oriented architecture using:
+
+**Django → PostgreSQL → Redis → Celery → Docker → Nginx**
+
+The primary engineering objective is **correctness under concurrency**, not simply building another CRUD API.
 
 ---
 
-## 🎯 Project Goal
+## 🚧 Project Status
 
-Traditional e-commerce APIs can struggle when thousands of users attempt to purchase a limited-stock product simultaneously.
+**Current Phase:** Phase 1 — Core API & Authentication
 
-This project focuses on solving backend problems that appear during flash-sale traffic spikes:
+| Component             | Current Status |
+| --------------------- | -------------- |
+| Django                | ✅ Implemented  |
+| Django REST Framework | ✅ Implemented  |
+| Custom User           | ✅ Implemented  |
+| JWT Authentication    | ✅ Implemented  |
+| Product CRUD          | ✅ Implemented  |
+| Category CRUD         | ✅ Implemented  |
+| Pagination            | ✅ Implemented  |
+| SQLite                | ✅ Development  |
+| PostgreSQL            | 🔜 Phase 2     |
+| Transactions          | 🔜 Phase 2     |
+| Row-Level Locking     | 🔜 Phase 2     |
+| Idempotent Orders     | 🔜 Phase 2     |
+| Redis                 | 🔜 Phase 3/4   |
+| Celery                | 🔜 Phase 3     |
+| Docker                | 🔜 Phase 5     |
+| Nginx/Gunicorn        | 🔜 Phase 5     |
+| Locust Load Testing   | 🔜 Phase 6     |
 
-* Concurrent inventory requests
+> **Important:** The current Phase 1 implementation is a development foundation. The high-concurrency inventory protection described below is part of the planned architecture and is not yet fully implemented.
+
+---
+
+# 🎯 Project Goal
+
+Flash sales create a difficult backend problem:
+
+> **What happens when thousands of users try to purchase the last few units of a product at almost the same time?**
+
+A naive inventory implementation might perform:
+
+```text
+Read Stock
+    ↓
+Check Stock > 0
+    ↓
+Create Order
+    ↓
+Decrease Stock
+```
+
+Under concurrent requests, multiple transactions may read the same stock value before any of them updates it.
+
+Example:
+
+```text
+Available Stock = 1
+
+Request A ──► Read stock = 1 ──► Continue
+Request B ──► Read stock = 1 ──► Continue
+Request C ──► Read stock = 1 ──► Continue
+
+                 ↓
+
+          Multiple purchases
+
+                 ↓
+
+            OVERSOLD STOCK
+```
+
+FlashPulse Engine is being built to address this class of problem using **database transactions, row-level locking, Redis atomic operations, database constraints, idempotency, and asynchronous processing**.
+
+---
+
+# 🧠 Engineering Problems
+
+The project focuses on several backend engineering challenges:
+
+* High-concurrency purchase requests
 * Race conditions
 * Inventory overselling
-* Duplicate order requests
+* Transactional inventory reservation
+* Duplicate checkout requests
+* Idempotency
 * Database contention
-* Slow checkout operations
+* Order expiration
 * Background processing
-* Inventory reservation and expiration
-* API rate limiting
-* Caching and atomic counters
+* Redis caching
+* Atomic inventory operations
+* API throttling
 * Production deployment
-
-The final architecture will combine **database-level concurrency control**, **Redis atomic operations**, and **asynchronous task processing**.
+* Concurrency load testing
 
 ---
 
@@ -36,34 +107,41 @@ The final architecture will combine **database-level concurrency control**, **Re
 
 ## Current Architecture
 
-The current implementation is a Django + DRF monolith using SQLite during development.
+Phase 1 is intentionally simple.
 
 ```text
-                         ┌──────────────────┐
-                         │      Client      │
-                         │ Web / Mobile/API │
-                         └────────┬─────────┘
-                                  │
-                                  ▼
-                         ┌──────────────────┐
-                         │   Django + DRF   │
-                         │     REST API     │
-                         └────────┬─────────┘
-                                  │
-                    ┌─────────────┴─────────────┐
-                    │                           │
-                    ▼                           ▼
-              SQLite Database            JWT Authentication
+                    ┌───────────────────┐
+                    │      Client       │
+                    │ Web / Mobile / API│
+                    └─────────┬─────────┘
+                              │
+                              ▼
+                    ┌───────────────────┐
+                    │    Django + DRF   │
+                    │     REST API      │
+                    └─────────┬─────────┘
+                              │
+                  ┌───────────┴───────────┐
+                  │                       │
+                  ▼                       ▼
+          ┌──────────────┐        ┌──────────────┐
+          │    SQLite    │        │     JWT      │
+          │  Development │        │ Authentication│
+          └──────────────┘        └──────────────┘
 ```
 
-## Target Architecture
+The current system focuses on establishing a clean domain model, authentication system, catalog APIs, permissions, and API foundations before introducing distributed infrastructure.
 
-The final system will evolve into a multi-service backend:
+---
+
+# 🚀 Target Architecture
+
+The final system will evolve toward:
 
 ```text
                          ┌──────────────────┐
                          │      Client      │
-                         │ Web / Mobile/API │
+                         │ Web / Mobile /API│
                          └────────┬─────────┘
                                   │
                                   ▼
@@ -76,49 +154,65 @@ The final system will evolve into a multi-service backend:
                          ┌──────────────────┐
                          │   Django + DRF   │
                          │     REST API     │
-                         └───────┬──────────┘
-                                 │
-                  ┌──────────────┼──────────────┐
-                  │              │              │
-                  ▼              ▼              ▼
-             PostgreSQL       Redis         Celery
-             Primary DB      Cache/Lock     Workers
-                  │              │              │
-                  │              │              ▼
-                  │              │        Background Jobs
-                  │              │
-                  └──────────────┴──────────────┐
-                                                 │
-                                                 ▼
-                                          Order / Inventory
-                                            Processing
+                         └────────┬─────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+       ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+       │ PostgreSQL  │     │    Redis    │     │   Celery    │
+       │ Transaction │     │ Cache/Atomic│     │   Workers   │
+       │    State    │     │  Operations │     │             │
+       └─────────────┘     └─────────────┘     └──────┬──────┘
+                                                     │
+                                                     ▼
+                                              ┌─────────────┐
+                                              │ Celery Beat │
+                                              │  Scheduler  │
+                                              └─────────────┘
 ```
+
+### Responsibility of Each Layer
+
+| Component    | Responsibility                           |
+| ------------ | ---------------------------------------- |
+| Django + DRF | API and business logic                   |
+| PostgreSQL   | Durable transactional state              |
+| Redis        | Caching and high-speed atomic operations |
+| Celery       | Background processing                    |
+| Celery Beat  | Scheduled jobs                           |
+| Nginx        | Reverse proxy                            |
+| Gunicorn     | Production WSGI server                   |
+| Docker       | Containerization                         |
+| Locust       | Concurrency/load testing                 |
 
 ---
 
 # 🛠️ Tech Stack
 
-| Technology            | Purpose                                 |
-| --------------------- | --------------------------------------- |
-| Python 3.11+          | Backend programming language            |
-| Django 5.x            | Web framework                           |
-| Django REST Framework | REST API                                |
-| SimpleJWT             | JWT authentication                      |
-| SQLite                | Development database                    |
-| PostgreSQL            | Production relational database          |
-| Redis                 | Caching and atomic inventory operations |
-| Celery                | Background task processing              |
-| Celery Beat           | Scheduled background tasks              |
-| Docker                | Containerization                        |
-| Docker Compose        | Multi-service orchestration             |
-| Nginx                 | Reverse proxy                           |
-| python-decouple       | Environment-based configuration         |
+| Technology            | Purpose                        |
+| --------------------- | ------------------------------ |
+| Python                | Backend programming            |
+| Django                | Web framework                  |
+| Django REST Framework | REST API                       |
+| SimpleJWT             | JWT authentication             |
+| SQLite                | Phase 1 development database   |
+| PostgreSQL            | Production relational database |
+| Redis                 | Cache and atomic operations    |
+| Celery                | Asynchronous task processing   |
+| Celery Beat           | Scheduled tasks                |
+| Docker                | Containerization               |
+| Docker Compose        | Multi-container orchestration  |
+| Nginx                 | Reverse proxy                  |
+| Gunicorn              | Production application server  |
+| Locust                | Load and concurrency testing   |
+| python-decouple       | Environment configuration      |
 
 ---
 
 # 📦 Domain Architecture
 
-The project is divided into separate Django applications based on business responsibilities.
+The project is divided into Django applications based on business responsibility.
 
 ```text
 flash_sale_engine/
@@ -163,53 +257,70 @@ flash_sale_engine/
 └── README.md
 ```
 
-## Application Responsibilities
+---
 
-### `users`
+# 🧩 Django Applications
+
+## `users`
 
 Responsible for:
 
 * Custom user model
 * UUID user IDs
-* Email authentication
+* Email-based authentication
 * User roles
 * JWT authentication
-* User profile API
+* User registration
+* User profile
 
-### `catalog`
+### Roles
+
+```text
+CUSTOMER
+ADMIN
+```
+
+---
+
+## `catalog`
 
 Responsible for:
 
 * Categories
 * Products
-* Product CRUD operations
-* Category CRUD operations
+* Product CRUD
+* Category CRUD
 * Product/category relationships
 * Pagination
 * Base product information
 * Base inventory
 
-### `flash_sales`
+---
 
-Responsible for:
+## `flash_sales`
+
+Planned responsibility:
 
 * Flash-sale events
-* Flash-sale pricing
+* Sale pricing
 * Allocated inventory
 * Inventory reservations
-* Sale time windows
+* Sale start/end times
 * Sale status
+* Inventory locking
 
-### `orders`
+---
 
-Responsible for:
+## `orders`
+
+Planned responsibility:
 
 * Order creation
 * Order lifecycle
 * Payment state
 * Idempotency
+* Reservation tracking
 * Order expiration
-* Inventory reservation tracking
 
 ---
 
@@ -227,13 +338,6 @@ User
 ├── is_active
 ├── created_at
 └── updated_at
-```
-
-Roles:
-
-```text
-CUSTOMER
-ADMIN
 ```
 
 ---
@@ -266,9 +370,9 @@ Product
 
 ---
 
-## Flash Sale
+## Flash Sale Item
 
-Planned model:
+**Planned model**
 
 ```text
 FlashSaleItem
@@ -282,7 +386,7 @@ FlashSaleItem
 └── status
 ```
 
-Possible statuses:
+Possible states:
 
 ```text
 SCHEDULED
@@ -291,13 +395,13 @@ ENDED
 SOLD_OUT
 ```
 
-> **Design note:** If a product can participate in multiple flash-sale events, `product` should normally be a `ForeignKey` rather than a `OneToOneField`.
+A product can participate in multiple flash-sale events, so the relationship is designed around a `ForeignKey` rather than a one-to-one relationship.
 
 ---
 
 ## Order
 
-Planned model:
+**Planned model**
 
 ```text
 Order
@@ -310,38 +414,40 @@ Order
 └── expires_at
 ```
 
-Order states:
+Possible states:
 
 ```text
 PENDING_PAYMENT
 PAID
 CANCELLED
 EXPIRED
+COMPLETED
 ```
 
 ---
 
 # 🔐 Authentication
 
-The API uses **JWT authentication** through SimpleJWT.
-
-Authentication flow:
+FlashPulse Engine uses **JWT authentication with SimpleJWT**.
 
 ```text
-Register
-   │
-   ▼
-Login with email/password
-   │
-   ▼
-Access + Refresh tokens
-   │
-   ├── Access Token → API requests
-   │
-   └── Refresh Token → New Access Token
+              Register
+                  │
+                  ▼
+          Email + Password
+                  │
+                  ▼
+                Login
+                  │
+          ┌───────┴───────┐
+          ▼               ▼
+     Access Token    Refresh Token
+          │               │
+          ▼               ▼
+     API Requests    New Access Token
 ```
 
-Protected requests use:
+Authenticated requests use:
 
 ```http
 Authorization: Bearer <access_token>
@@ -349,132 +455,106 @@ Authorization: Bearer <access_token>
 
 ---
 
-# 📡 API Endpoints
+# 📡 API
 
-The API is versioned by application/domain rather than placing all endpoints under one resource.
+## Authentication
 
-## Authentication API
-
-| Method | Endpoint                    | Description           | Auth |
-| ------ | --------------------------- | --------------------- | ---- |
-| POST   | `/api/users/register/`      | Register a new user   | No   |
-| POST   | `/api/users/login/`         | Login a user          | No   |
-| POST   | `/api/users/logout/`        | Logout a user         | Yes  |
-| POST   | `/api/users/token/`         | Obtain JWT tokens     | No   |
-| POST   | `/api/users/token/refresh/` | Refresh access token  | No   |
-| GET    | `/api/users/profile/`       | Retrieve current user | Yes  |
+| Method | Endpoint                    | Description          | Auth |
+| ------ | --------------------------- | -------------------- | ---- |
+| POST   | `/api/users/register/`      | Register user        | No   |
+| POST   | `/api/users/login/`         | Login user           | No   |
+| POST   | `/api/users/logout/`        | Logout user          | Yes  |
+| POST   | `/api/users/token/`         | Obtain JWT tokens    | No   |
+| POST   | `/api/users/token/refresh/` | Refresh access token | No   |
+| GET    | `/api/users/profile/`       | Get current user     | Yes  |
 
 ---
 
 # 📦 Catalog API
 
-The Catalog API currently supports **Product CRUD**, **Category CRUD**, and **pagination**.
-
 ## Products
 
-### Product List / Create
+### List Products
 
 ```http
 GET /api/catalog/products/
+```
+
+### Create Product
+
+```http
 POST /api/catalog/products/
 ```
 
-| Method | Description                     | Authentication               |
-| ------ | ------------------------------- | ---------------------------- |
-| GET    | Retrieve paginated product list | Depends on API configuration |
-| POST   | Create a product                | Depends on API configuration |
+### Retrieve Product
 
-Example:
+```http
+GET /api/catalog/products/<product_id>/
+```
 
-```text
-http://127.0.0.1:8000/api/catalog/products/
+### Update Product
+
+```http
+PUT /api/catalog/products/<product_id>/
+```
+
+### Partial Update
+
+```http
+PATCH /api/catalog/products/<product_id>/
+```
+
+### Delete Product
+
+```http
+DELETE /api/catalog/products/<product_id>/
 ```
 
 ---
 
-### Product Detail
+## Categories
+
+### List Categories
 
 ```http
-GET /api/catalog/products/<product_id>
-PUT /api/catalog/products/<product_id>
-PATCH /api/catalog/products/<product_id>
-DELETE /api/catalog/products/<product_id>
+GET /api/catalog/categories/
 ```
 
-Example:
-
-```text
-http://127.0.0.1:8000/api/catalog/products/0a90b9ff-7abd-4aac-8a30-ec0cbdc97397
-```
-
-Supported operations:
-
-| Method | Operation                   |
-| ------ | --------------------------- |
-| GET    | Retrieve a single product   |
-| PUT    | Completely update a product |
-| PATCH  | Partially update a product  |
-| DELETE | Delete a product            |
-
----
-
-# 🗂️ Categories
-
-### Category List / Create
+### Create Category
 
 ```http
-GET /api/catalog/catagories/
-POST /api/catalog/catagories/
+POST /api/catalog/categories/
 ```
 
-Example:
-
-```text
-http://127.0.0.1:8000/api/catalog/Categories/
-```
-
-Supported operations:
-
-| Method | Operation              |
-| ------ | ---------------------- |
-| GET    | Retrieve category list |
-| POST   | Create a category      |
-
----
-
-### Category Detail
+### Retrieve Category
 
 ```http
-GET /api/catalog/Categories/<category_id>
-PUT /api/catalog/Categories/<category_id>
-PATCH /api/catalog/Categories/<category_id>
-DELETE /api/catalog/Categories/<category_id>
+GET /api/catalog/categories/<category_id>/
 ```
 
-Example:
+### Update Category
 
-```text
-http://127.0.0.1:8000/api/catalog/Categories/0a90b9ff-7abd-4aac-8a30-ec0cbdc97397
+```http
+PUT /api/catalog/categories/<category_id>/
 ```
 
-Supported operations:
+### Partial Update
 
-| Method | Operation                    |
-| ------ | ---------------------------- |
-| GET    | Retrieve a single category   |
-| PUT    | Completely update a category |
-| PATCH  | Partially update a category  |
-| DELETE | Delete a category            |
+```http
+PATCH /api/catalog/categories/<category_id>/
+```
 
+### Delete Category
 
+```http
+DELETE /api/catalog/categories/<category_id>/
+```
 
 ---
 
 # 📄 Pagination
 
-The Product API supports paginated responses.
-
-Instead of returning every product in a single response, the API divides the results into pages.
+The Product API supports pagination.
 
 Example:
 
@@ -482,13 +562,7 @@ Example:
 GET /api/catalog/products/?page=1
 ```
 
-Example:
-
-```http
-GET /api/catalog/products/?page=2
-```
-
-A typical paginated response has the following structure:
+Example response:
 
 ```json
 {
@@ -498,29 +572,25 @@ A typical paginated response has the following structure:
     "results": [
         {
             "id": "0a90b9ff-7abd-4aac-8a30-ec0cbdc97397",
-            "catagory": "footwear",
+            "category": "footwear",
             "name": "Classic Running Sneakers",
             "slug": "classic-running-sneakers",
-            "description": "Lightweight mesh athletic sneakers with cushioned foam soles for daily wear.",
+            "description": "Lightweight athletic sneakers.",
             "base_price": "75.00",
             "base_stock": 120,
-            "is_active": true,
-            "created_at": "2026-09-15T12:18:28.902037Z",
-            "updated_at": "2026-09-15T12:18:28.902096Z"
+            "is_active": true
         }
     ]
 }
 ```
 
-Pagination is important for the project because a production e-commerce system may eventually contain thousands or millions of catalog records.
+Pagination becomes important as the catalog grows to thousands or millions of records.
 
 ---
 
-# 📝 API Examples
+# 🔑 API Examples
 
-## Register User
-
-### Request
+## Register
 
 ```http
 POST /api/users/register/
@@ -536,7 +606,7 @@ Content-Type: application/json
 }
 ```
 
-### Response
+Example response:
 
 ```json
 {
@@ -550,9 +620,7 @@ Content-Type: application/json
 
 ---
 
-# 🔑 Login
-
-### Request
+## Login
 
 ```http
 POST /api/users/token/
@@ -566,7 +634,7 @@ Content-Type: application/json
 }
 ```
 
-### Response
+Response:
 
 ```json
 {
@@ -577,16 +645,14 @@ Content-Type: application/json
 
 ---
 
-# 👤 Current User
-
-### Request
+## Get Current User
 
 ```http
 GET /api/users/profile/
 Authorization: Bearer <access_token>
 ```
 
-### Response
+Response:
 
 ```json
 {
@@ -600,119 +666,458 @@ Authorization: Bearer <access_token>
 
 ---
 
-# 🛍️ Product API Example
+# ⚡ Flash Sale Concurrency Strategy
 
-### Create Product
+The central engineering challenge is preventing overselling when many users compete for limited inventory.
 
-```http
-POST /api/catalog/products/
-Content-Type: application/json
+The planned architecture uses multiple layers.
+
+## Layer 1 — Database Transactions
+
+Django's:
+
+```python
+transaction.atomic()
+```
+
+will ensure that inventory reservation and order creation occur within a transactional boundary.
+
+---
+
+## Layer 2 — Row-Level Locking
+
+PostgreSQL will use:
+
+```python
+select_for_update()
+```
+
+to lock the relevant inventory row while the transaction is executing.
+
+Conceptually:
+
+```python
+with transaction.atomic():
+
+    item = (
+        FlashSaleItem.objects
+        .select_for_update()
+        .get(id=flash_sale_item_id)
+    )
+
+    # Validate inventory
+    # Reserve stock
+    # Create order
+```
+
+This is intended to prevent concurrent transactions from modifying the same inventory record incorrectly.
+
+---
+
+## Layer 3 — Database Constraints
+
+The database will enforce business invariants where appropriate.
+
+For example:
+
+```text
+reserved_stock >= 0
+allocated_stock >= 0
+```
+
+Database constraints provide a final layer of protection against invalid states.
+
+---
+
+## Layer 4 — Redis Atomic Operations
+
+Redis will eventually provide a high-speed inventory gate using atomic operations such as:
+
+```text
+DECR
+```
+
+Conceptually:
+
+```text
+Incoming Request
+       │
+       ▼
+ Redis Inventory Counter
+       │
+   ┌───┴────┐
+   │        │
+Stock > 0  Stock <= 0
+   │        │
+   ▼        ▼
+Continue   Reject
+   │
+   ▼
+PostgreSQL Transaction
+```
+
+Redis will act as a **fast traffic-control layer**, while PostgreSQL remains the source of durable transactional state.
+
+---
+
+## Layer 5 — Idempotency
+
+A client may retry a checkout request because of a timeout or network failure.
+
+Without idempotency:
+
+```text
+1 logical purchase
+       │
+       ├── Request 1
+       ├── Request 2
+       └── Request 3
+              │
+              ▼
+       Multiple orders
+```
+
+With an idempotency key:
+
+```text
+Request
+   │
+   ▼
+Idempotency-Key
+   │
+   ├── New ──────► Process
+   │
+   └── Existing ─► Return previous result
 ```
 
 Example:
 
-```json
-{
-    "name": "Mechanical Keyboard",
-    "description": "RGB mechanical keyboard",
-    "base_price": "79.99",
-    "base_stock": 100,
-    "category": 1
-}
-```
-
-### Get Products
-
 ```http
-GET /api/catalog/products/
-```
-
-### Get Single Product
-
-```http
-GET /api/catalog/products/<product_id>
-```
-
-### Update Product
-
-```http
-PUT /api/catalog/products/<product_id>
-```
-
-### Partial Update
-
-```http
-PATCH /api/catalog/products/<product_id>
-```
-
-### Delete Product
-
-```http
-DELETE /api/catalog/products/<product_id>
+POST /api/orders/
+Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
 ```
 
 ---
 
-# 🗂️ Category API Example
+# 🔄 Order Lifecycle
 
-### Create Category
+The planned order lifecycle is:
 
-```http
-POST /api/catalog/categories/
-Content-Type: application/json
+```text
+             ┌───────────────────┐
+             │ PENDING_PAYMENT   │
+             └─────────┬─────────┘
+                       │
+              ┌────────┴────────┐
+              ▼                 ▼
+            PAID             EXPIRED
+              │
+              ▼
+          COMPLETED
 ```
+
+Cancellation may occur before payment completion:
+
+```text
+PENDING_PAYMENT
+       │
+       ▼
+   CANCELLED
+```
+
+The final implementation will enforce valid state transitions at the application level.
+
+---
+
+# ⚙️ Asynchronous Processing
+
+Celery will be introduced to move non-critical work outside the main HTTP request.
+
+Planned background tasks include:
+
+* Order expiration
+* Inventory reservation release
+* Notification processing
+* Receipt generation
+* Payment simulation
+* Flash-sale status updates
+* Periodic cleanup
 
 Example:
 
-```json
-{
-    "name": "Electronics",
-}
+```text
+             Order Created
+                  │
+                  ▼
+             Django API
+                  │
+                  ▼
+             Celery Queue
+                  │
+          ┌───────┴────────┐
+          ▼                ▼
+       Worker          Celery Beat
+          │                │
+          ▼                ▼
+ Background Jobs     Scheduled Jobs
 ```
 
-### Get Categories
+---
 
-```http
-GET /api/catalog/categories/
+# 🧪 Testing Strategy
+
+Testing will evolve with each phase.
+
+### Current / Planned Coverage
+
+```text
+[ ] User registration
+[ ] Authentication
+[ ] JWT validation
+[ ] Permissions
+[ ] Product CRUD
+[ ] Category CRUD
+[ ] Pagination
+[ ] Flash-sale creation
+[ ] Inventory reservation
+[ ] Order creation
+[ ] Idempotency
+[ ] Order expiration
+[ ] Redis operations
+[ ] Celery tasks
+[ ] Transaction behavior
+[ ] Concurrent purchases
+[ ] Database constraints
 ```
 
-### Get Single Category
+The most important tests will focus on **concurrent requests competing for limited inventory**.
 
-```http
-GET /api/catalog/categories/<category_id>
+---
+
+# 🔥 Concurrency Load-Test Scenario
+
+The final load-testing scenario will simulate:
+
+```text
+Available Inventory:       100 units
+Concurrent Requests:       10,000
+
+Expected Invariants:
+
+Successful Purchases:      ≤ 100
+Oversold Items:             0
+Duplicate Orders:           0
+Negative Inventory:         0
+Invalid Inventory State:    0
 ```
 
-### Update Category
+Locust will eventually be used to generate concurrent traffic and measure how the backend behaves under load.
 
-```http
-PUT /api/catalog/categories/<category_id>
+---
+
+# 🐘 Development Roadmap
+
+## Phase 1 — Core API & Domain Setup
+
+**Status: 🟢 In Progress**
+
+* [x] Custom User model
+* [x] UUID user IDs
+* [x] Email authentication
+* [x] User roles
+* [x] JWT authentication
+* [x] User registration
+* [x] User profile API
+* [x] Category model
+* [x] Product model
+* [x] Product CRUD
+* [x] Category CRUD
+* [x] Pagination
+* [x] Environment configuration
+
+### Remaining
+
+* [ ] Improve API documentation
+* [ ] Expand automated tests
+* [ ] Advanced filtering
+* [ ] Search
+* [ ] Ordering
+* [ ] Prepare PostgreSQL migration
+
+---
+
+# Phase 2 — PostgreSQL & Transactional Inventory
+
+**Status: ⏳ Planned**
+
+* [ ] PostgreSQL configuration
+* [ ] Database environment configuration
+* [ ] FlashSale model
+* [ ] FlashSaleItem model
+* [ ] Order model
+* [ ] Database constraints
+* [ ] `transaction.atomic()`
+* [ ] `select_for_update()`
+* [ ] Inventory reservation
+* [ ] Order state transitions
+* [ ] Idempotent order creation
+* [ ] Transaction/concurrency tests
+
+**Primary goal:** establish a correct transactional inventory model before introducing Redis.
+
+---
+
+# Phase 3 — Celery & Background Processing
+
+**Status: ⏳ Planned**
+
+* [ ] Celery configuration
+* [ ] Redis broker
+* [ ] Celery worker
+* [ ] Celery Beat
+* [ ] Order expiration
+* [ ] Reservation release
+* [ ] Notification tasks
+* [ ] Task retries
+* [ ] Scheduled cleanup
+
+---
+
+# Phase 4 — Redis & High-Speed Protection
+
+**Status: ⏳ Planned**
+
+* [ ] Redis caching
+* [ ] Atomic inventory counters
+* [ ] Inventory `DECR`
+* [ ] Cache invalidation
+* [ ] Hot-product optimization
+* [ ] DRF throttling
+* [ ] Request rate limiting
+* [ ] Redis integration tests
+
+---
+
+# Phase 5 — Docker & Production Architecture
+
+**Status: ⏳ Planned**
+
+```text
+Docker Compose
+│
+├── Nginx
+├── Django / Gunicorn
+├── PostgreSQL
+├── Redis
+├── Celery Worker
+└── Celery Beat
 ```
 
-### Partial Update
+Planned production concerns:
 
-```http
-PATCH /api/catalog/categories/<category_id>
+* [ ] Dockerfile
+* [ ] Docker Compose
+* [ ] PostgreSQL container
+* [ ] Redis container
+* [ ] Celery worker
+* [ ] Celery Beat
+* [ ] Gunicorn
+* [ ] Nginx
+* [ ] HTTPS/TLS
+* [ ] Static/media handling
+* [ ] Production secrets
+* [ ] Health checks
+* [ ] Logging
+* [ ] Monitoring
+
+---
+
+# Phase 6 — Concurrency & Load Testing
+
+**Status: ⏳ Planned**
+
+The final phase will stress-test the inventory system.
+
+Example:
+
+```text
+10,000 concurrent purchase attempts
+              │
+              ▼
+       Limited inventory
+              │
+              ▼
+       Concurrency controls
+              │
+              ▼
+        PostgreSQL + Redis
+              │
+              ▼
+      Measure system invariants
 ```
 
-### Delete Category
+The primary success criteria are:
 
-```http
-DELETE /api/catalog/categories/<category_id>
+```text
+Overselling       = 0
+Negative Stock    = 0
+Duplicate Orders  = 0
 ```
+
+---
+
+# 🔐 Security
+
+Security considerations include:
+
+* JWT authentication
+* Password hashing through Django authentication
+* Role-based permissions
+* API throttling
+* Input validation
+* Database constraints
+* Idempotency protection
+* Environment-based secrets
+* HTTPS in production
+* Secure cookie/header configuration where applicable
+
+Never commit real environment secrets to Git.
+
+---
+
+# ⚙️ Environment Configuration
+
+Create a `.env` file:
+
+```env
+DEBUG=True
+
+SECRET_KEY=your-secret-key
+
+ALLOWED_HOSTS=localhost,127.0.0.1
+
+DATABASE_URL=
+
+REDIS_URL=redis://localhost:6379/0
+
+CELERY_BROKER_URL=redis://localhost:6379/0
+
+CELERY_RESULT_BACKEND=redis://localhost:6379/1
+```
+
+Production secrets should be supplied through the deployment environment or an appropriate secrets-management system.
 
 ---
 
 # 🚀 Quick Start
 
-## 1. Clone the Repository
+## 1. Clone
 
 ```bash
-git clone https://github.com/your-username/flash_sale_engine.git
+git clone https://github.com/your-username/flashpulse-engine.git
 
-cd flash_sale_engine
+cd flashpulse-engine
 ```
-
----
 
 ## 2. Create Virtual Environment
 
@@ -732,53 +1137,31 @@ python -m venv venv
 venv\Scripts\activate
 ```
 
----
-
 ## 3. Install Dependencies
 
 ```bash
-pip install django djangorestframework djangorestframework-simplejwt python-decouple
+pip install django \
+    djangorestframework \
+    djangorestframework-simplejwt \
+    python-decouple
 ```
 
----
+## 4. Configure Environment
 
-## 4. Configure Environment Variables
-
-Create a `.env` file:
+Create `.env`:
 
 ```env
 SECRET_KEY=your-secret-key
-
 DEBUG=True
-
 ALLOWED_HOSTS=localhost,127.0.0.1
 ```
-
-For future phases:
-
-```env
-DATABASE_URL=
-
-REDIS_URL=redis://localhost:6379/0
-
-CELERY_BROKER_URL=redis://localhost:6379/0
-
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
-```
-
-Never commit your real `.env` file to Git.
-
----
 
 ## 5. Apply Migrations
 
 ```bash
 python manage.py makemigrations
-
 python manage.py migrate
 ```
-
----
 
 ## 6. Create Admin User
 
@@ -786,15 +1169,13 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
----
-
-## 7. Start Development Server
+## 7. Run Server
 
 ```bash
 python manage.py runserver
 ```
 
-The API will be available at:
+API:
 
 ```text
 http://127.0.0.1:8000/
@@ -808,370 +1189,61 @@ http://127.0.0.1:8000/admin/
 
 ---
 
-# 🧪 Testing
+# 📈 Project Evolution
 
-Testing will be expanded throughout the project.
+FlashPulse Engine is intentionally developed in stages:
 
-Planned coverage includes:
+```text
+                    Phase 1
+                       │
+                       ▼
+                  CRUD + JWT
+                       │
+                       ▼
+                 PostgreSQL
+                       │
+                       ▼
+                 Transactions
+                       │
+                       ▼
+              Row-Level Locking
+                       │
+                       ▼
+              Inventory Control
+                       │
+                       ▼
+                    Redis
+                       │
+                       ▼
+                   Celery
+                       │
+                       ▼
+                    Docker
+                       │
+                       ▼
+             Production Architecture
+                       │
+                       ▼
+              Concurrency Testing
+```
 
-* [ ] User registration
-* [ ] Authentication
-* [ ] Permissions
-* [ ] Product CRUD
-* [ ] Category CRUD
-* [ ] Pagination
-* [ ] Flash-sale APIs
-* [ ] Order creation
-* [ ] Inventory allocation
-* [ ] Idempotency
-* [ ] Concurrent purchase requests
-* [ ] Order expiration
-* [ ] Celery tasks
-* [ ] Redis operations
-
-The final system will specifically test concurrency scenarios where multiple requests attempt to purchase the last available units.
+Each phase introduces a specific backend engineering concept rather than adding infrastructure without a clear purpose.
 
 ---
 
-# 📈 Development Roadmap
+# 🧠 Engineering Concepts Demonstrated
 
-## Phase 1 — Core API & Domain Setup
-
-**Status: 🟢 Active Development**
-
-### Completed
-
-* [x] Custom User model
-* [x] UUID user IDs
-* [x] Email-based authentication
-* [x] User roles
-* [x] JWT authentication
-* [x] User registration
-* [x] User profile endpoint
-* [x] Category model
-* [x] Product model
-* [x] Product CRUD API
-* [x] Category CRUD API
-* [x] Product pagination
-* [x] Environment-based configuration
-* [x] Development environment
-
-### Remaining
-
-* [ ] Improve API documentation
-* [ ] Expand automated tests
-* [ ] Add advanced catalog filtering/search
-* [ ] Prepare database migration
-
----
-
-# 🐘 Phase 2 — PostgreSQL & Transactional Inventory
-
-**Status: ⏳ Planned**
-
-Move from SQLite to PostgreSQL.
-
-### Goals
-
-* [ ] PostgreSQL configuration
-* [ ] Environment-based database configuration
-* [ ] FlashSale model
-* [ ] FlashSaleItem model
-* [ ] Order model
-* [ ] Database constraints
-* [ ] `transaction.atomic()`
-* [ ] Row-level locking
-* [ ] `select_for_update()`
-* [ ] Inventory reservation
-* [ ] Order state transitions
-* [ ] Idempotent order creation
-
-### Core Concurrency Concept
-
-```python
-with transaction.atomic():
-    item = (
-        FlashSaleItem.objects
-        .select_for_update()
-        .get(id=flash_sale_item_id)
-    )
-
-    # Validate inventory
-    # Reserve stock
-    # Create order
-```
-
-The objective is to make inventory allocation safe when multiple transactions compete for the same inventory.
-
----
-
-# ⚙️ Phase 3 — Celery & Redis
-
-**Status: ⏳ Planned**
-
-Introduce asynchronous processing.
-
-## Celery
-
-Background jobs will handle:
-
-```text
-Order
-  │
-  ├── Payment simulation
-  ├── Receipt generation
-  └── Notification processing
-```
-
-## Celery Beat
-
-Scheduled tasks will handle:
-
-* Expired orders
-* Unreleased reservations
-* Flash-sale status updates
-* Periodic cleanup jobs
-
----
-
-# ⚡ Phase 4 — Redis & High-Speed Inventory Protection
-
-**Status: ⏳ Planned**
-
-Redis will be introduced for high-speed operations.
-
-Planned functionality:
-
-* [ ] Redis caching
-* [ ] Atomic inventory counters
-* [ ] `DECR` / atomic decrement operations
-* [ ] Cache invalidation
-* [ ] Inventory protection
-* [ ] DRF throttling
-* [ ] Request rate limiting
-* [ ] Hot-product optimization
-
-Conceptually:
-
-```text
-Incoming Purchase Request
-          │
-          ▼
-     Redis Counter
-          │
-     ┌────┴────┐
-     │         │
-   Stock > 0  Stock <= 0
-     │         │
-     ▼         ▼
- Continue    Reject
-     │
-     ▼
- PostgreSQL
-```
-
-Redis will act as a **fast protection layer**, while PostgreSQL remains responsible for durable transactional state.
-
----
-
-# 🐳 Phase 5 — Docker & Production Architecture
-
-**Status: ⏳ Planned**
-
-The application will eventually run as multiple services:
-
-```text
-┌─────────────────────────────────────────────┐
-│              Docker Compose                 │
-│                                             │
-│  ┌──────────┐                               │
-│  │  Nginx   │                               │
-│  └────┬─────┘                               │
-│       │                                      │
-│  ┌────▼─────┐       ┌──────────────┐        │
-│  │  Django  │──────►│ PostgreSQL   │        │
-│  └────┬─────┘       └──────────────┘        │
-│       │                                      │
-│       ├──────────────► Redis                 │
-│       │                                      │
-│       ▼                                      │
-│  ┌────────────┐                              │
-│  │   Celery   │                              │
-│  │   Worker   │                              │
-│  └─────┬──────┘                              │
-│        │                                     │
-│        ▼                                     │
-│  ┌────────────┐                              │
-│  │ Celery Beat│                              │
-│  └────────────┘                              │
-│                                             │
-└─────────────────────────────────────────────┘
-```
-
-Planned production concerns:
-
-* [ ] Dockerfile
-* [ ] Docker Compose
-* [ ] PostgreSQL container
-* [ ] Redis container
-* [ ] Celery worker
-* [ ] Celery Beat
-* [ ] Nginx
-* [ ] Gunicorn
-* [ ] HTTPS/TLS
-* [ ] Static/media storage
-* [ ] Production secrets
-* [ ] Health checks
-* [ ] Logging
-* [ ] Monitoring
-
----
-
-# 🔥 Concurrency & Overselling Problem
-
-The central engineering problem is:
-
-> What happens when 10,000 users attempt to purchase 100 available items at nearly the same time?
-
-A naive implementation can produce:
-
-```text
-Request A → stock = 1
-Request B → stock = 1
-Request C → stock = 1
-
-A → purchase
-B → purchase
-C → purchase
-
-Result:
-More units can be sold than actually exist.
-```
-
-The project progressively introduces stronger mechanisms to solve this.
-
-## Layer 1 — Database Transactions
-
-```text
-transaction.atomic()
-```
-
-Provides transactional consistency.
-
-## Layer 2 — Row-Level Locking
-
-```text
-select_for_update()
-```
-
-Allows PostgreSQL transactions to coordinate access to the same inventory row.
-
-## Layer 3 — Redis Atomic Operations
-
-```text
-DECR
-```
-
-Provides fast atomic counter operations for the high-traffic path.
-
-## Layer 4 — Idempotency
-
-```text
-Idempotency-Key
-```
-
-Prevents duplicate order processing when clients retry requests.
-
----
-
-# 🔑 Idempotency
-
-A client may accidentally send the same purchase request multiple times:
-
-```text
-Client
-  │
-  ├── Request 1 ──► API
-  │
-  └── Request 2 ──► API
-```
-
-Without idempotency:
-
-```text
-1 logical purchase
-       ↓
-Potentially multiple orders
-```
-
-With an idempotency key:
-
-```text
-Request
-   │
-   ▼
-Idempotency Key
-   │
-   ├── New → Process order
-   │
-   └── Existing → Return previous result
-```
-
-Example:
-
-```http
-POST /api/orders/
-
-Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
-```
-
----
-
-# 🔄 Order Lifecycle
-
-```text
-                ┌──────────────────┐
-                │     PENDING      │
-                │     PAYMENT      │
-                └────────┬─────────┘
-                         │
-                ┌────────┴────────┐
-                │                 │
-                ▼                 ▼
-             PAID             EXPIRED
-                │
-                ▼
-             COMPLETED
-```
-
-Cancellation can occur before payment completion:
-
-```text
-PENDING_PAYMENT
-       │
-       ▼
-   CANCELLED
-```
-
-The exact state machine and allowed transitions will be enforced at the application level.
-
----
-
-# 🧩 Engineering Concepts Demonstrated
-
-This project is intended to demonstrate practical backend engineering rather than simply CRUD development.
-
-## Django
+### Django
 
 * Custom User Models
-* Model relationships
 * Custom managers
+* Model relationships
 * Django Admin
 * Environment configuration
 * Transactions
 * Database constraints
 
-## Django REST Framework
+### Django REST Framework
 
 * Serializers
 * APIViews
@@ -1181,36 +1253,36 @@ This project is intended to demonstrate practical backend engineering rather tha
 * Authentication
 * Permissions
 * Pagination
-* Throttling
 * Filtering
+* Throttling
 * Error handling
 
-## PostgreSQL
+### PostgreSQL
 
 * Relational modeling
-* Indexes
 * Constraints
+* Indexes
 * Transactions
 * Row-level locking
-* Query optimization
 * Concurrent transactions
+* Query optimization
 
-## Redis
+### Redis
 
 * Caching
 * Atomic counters
-* Fast inventory checks
+* Inventory protection
 * Cache invalidation
 
-## Celery
+### Celery
 
 * Background jobs
 * Task retries
-* Scheduled jobs
+* Scheduled tasks
 * Celery Beat
-* Async order processing
+* Asynchronous workflows
 
-## DevOps
+### DevOps
 
 * Docker
 * Docker Compose
@@ -1223,83 +1295,19 @@ This project is intended to demonstrate practical backend engineering rather tha
 
 ---
 
-# 📊 Target System Behavior
-
-The final system aims to support the following flow:
-
-```text
-                 Flash Sale Starts
-                       │
-                       ▼
-                User sends request
-                       │
-                       ▼
-                DRF Authentication
-                       │
-                       ▼
-                 Rate Limiting
-                       │
-                       ▼
-                 Redis Inventory
-                       │
-                ┌──────┴──────┐
-                │             │
-             Available      Sold Out
-                │             │
-                ▼             ▼
-        Create/Reserve      Reject
-                │
-                ▼
-        PostgreSQL Transaction
-                │
-                ▼
-          Create Order
-                │
-                ▼
-          Celery Processing
-                │
-        ┌───────┴────────┐
-        ▼                ▼
-     Payment          Expiration
-        │                │
-        ▼                ▼
-      PAID            EXPIRED
-```
-
----
-
-# ⚠️ Current Limitations
-
-The current Phase 1 implementation is **not designed for real flash-sale traffic**.
-
-Currently:
-
-* SQLite is used for development
-* Redis is not yet integrated
-* Celery is not yet integrated
-* PostgreSQL locking is not yet implemented
-* Inventory concurrency protection is not yet implemented
-* Docker deployment is not yet implemented
-* Production monitoring is not yet implemented
-
-The current version should therefore be considered a **development foundation**, not a production-ready flash-sale system.
-
----
-
 # 🔮 Future Improvements
 
-Potential future additions include:
+Potential future extensions include:
 
-* Distributed locks
+* Distributed locking
 * Advanced inventory reservation
 * Payment gateway integration
-* WebSocket-based order updates
+* WebSocket order updates
 * Event-driven architecture
 * Kafka/RabbitMQ evaluation
 * Prometheus metrics
 * Structured logging
 * Distributed tracing
-* Locust-based load testing
 * Database query optimization
 * Horizontal API scaling
 * Read replicas
@@ -1308,144 +1316,68 @@ Potential future additions include:
 
 ---
 
-# 🧪 Load Testing Goal
+# ⚠️ Current Limitations
 
-A major goal of the project is to simulate flash-sale traffic rather than only testing normal CRUD requests.
+The current Phase 1 system is **not a production flash-sale system**.
 
-Example scenario:
+Currently:
+
+* SQLite is used for development
+* PostgreSQL concurrency controls are not implemented
+* Redis is not integrated
+* Celery is not integrated
+* Inventory reservation is not implemented
+* Idempotent checkout is not implemented
+* Docker deployment is not implemented
+* Load testing is not implemented
+* Production monitoring is not implemented
+
+The current release should therefore be viewed as the **foundation for the final high-concurrency system**.
+
+---
+
+# 🎯 Final Objective
+
+The ultimate objective of FlashPulse Engine is to demonstrate how a backend can evolve from a conventional REST API into a system designed around **correctness, concurrency, transactional integrity, and asynchronous processing**.
+
+The project is not simply about adding Django, PostgreSQL, Redis, and Celery.
+
+It is about understanding **why each component is introduced and what engineering problem it solves**.
 
 ```text
-Available Stock: 100
-
-Concurrent Requests: 10,000
-
-Expected Result:
-
-Successful purchases ≤ 100
-Overselling = 0
-Duplicate orders = 0
-Invalid inventory state = 0
-```
-
-This will provide a measurable demonstration of the concurrency controls implemented throughout the project.
-
----
-
-# 🔐 Security
-
-Security considerations include:
-
-* JWT authentication
-* Password hashing through Django's authentication system
-* Role-based permissions
-* API throttling
-* Environment-based secrets
-* Input validation
-* Database constraints
-* Idempotency protection
-* Production HTTPS
-* Secure cookie/header configuration where applicable
-
-Never commit `.env` files or production secrets to Git.
-
----
-
-# 📁 Environment Variables
-
-Example:
-
-```env
-DEBUG=True
-
-SECRET_KEY=your-secret-key
-
-ALLOWED_HOSTS=localhost,127.0.0.1
-
-DATABASE_URL=
-
-REDIS_URL=redis://localhost:6379/0
-
-CELERY_BROKER_URL=redis://localhost:6379/0
-
-CELERY_RESULT_BACKEND=redis://localhost:6379/1
-```
-
-Production values should be supplied through the deployment environment or a dedicated secrets mechanism.
-
----
-
-# 🤝 Development
-
-Clone the project:
-
-```bash
-git clone https://github.com/your-username/flash_sale_engine.git
-
-cd flash_sale_engine
-```
-
-Create a feature branch:
-
-```bash
-git checkout -b feature/inventory-locking
-```
-
-Run migrations:
-
-```bash
-python manage.py migrate
-```
-
-Run tests:
-
-```bash
-python manage.py test
-```
-
-Start the development server:
-
-```bash
-python manage.py runserver
-```
-
----
-
-# 📜 License
-
-This project is currently being developed as a backend engineering portfolio and learning project.
-
-Add an appropriate open-source license before distributing the project publicly.
-
----
-
-# 👨‍💻 Project Focus
-
-The primary objective of this project is to demonstrate how a Django REST API can evolve from a simple CRUD backend into a system designed for high-concurrency workloads.
-
-```text
-CRUD API
-   ↓
+CRUD
+  ↓
 Authentication
-   ↓
-Pagination
-   ↓
+  ↓
+Domain Modeling
+  ↓
 PostgreSQL
-   ↓
+  ↓
 Transactions
-   ↓
+  ↓
 Concurrency Control
-   ↓
-Inventory Protection
-   ↓
+  ↓
+Inventory Reservation
+  ↓
+Idempotency
+  ↓
 Redis
-   ↓
-Asynchronous Processing
-   ↓
+  ↓
 Celery
-   ↓
+  ↓
 Docker
-   ↓
+  ↓
+Load Testing
+  ↓
 Production Architecture
 ```
 
-The project prioritizes **correctness under concurrency** over simply adding more infrastructure.
+> **Core principle:** Build for correctness first, then optimize for scale.
+
+---
+
+## 📜 License
+
+This project is currently being developed as a backend engineering portfolio and learning project.
+
+An appropriate open-source license can be added before public distribution.
