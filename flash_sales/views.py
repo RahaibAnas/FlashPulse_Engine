@@ -21,10 +21,10 @@ def home(request):
     )
 
 class FlashSalesListCreateApiView(ListCreateAPIView):
-    queryset = FlashSale.objects.all()
+    queryset = FlashSale.objects.select_related('product').all()
     serializer_class = FlashSalesSerializer
 
 
 class FlashSalesDetailsApiView(RetrieveUpdateDestroyAPIView):
-    queryset = FlashSale.objects.all()
+    queryset = FlashSale.objects.select_related("product").all()
     serializer_class = FlashSalesSerializer

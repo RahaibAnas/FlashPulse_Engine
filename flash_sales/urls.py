@@ -10,7 +10,7 @@ urlpatterns = [
         name="FlashSalesListCreateApiView",
     ),
     path(
-        "products/<str:id>/",
+        "products/<uuid:pk>/",
         view=FlashSalesDetailsApiView.as_view(),
         name="FlashSalesDetailsApiView",
     ),
