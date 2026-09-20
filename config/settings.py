@@ -114,7 +114,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Karachi"
 
 USE_I18N = True
 
@@ -144,4 +144,18 @@ REST_FRAMEWORK = {
         # "rest_framework_simplejwt.authentication.JWTAuthentication",
         'users.authentication.CustomAuthentication',
     ),
+}
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
+
+
+CACHE = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://localhost:6379/2",
+        "OPTION": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
 }

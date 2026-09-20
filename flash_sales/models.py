@@ -32,10 +32,10 @@ class FlashSaleItem(models.Model):
 
         if self.flash_price > self.product.base_price:
             raise ValidationError({"flash_price":"Flash price must be less and equal to base price"})
-
-        if self.start_date > self.end_date:
-            raise ValidationError({"end_date":"Sales End date must be after Start date"})
-
+        if self.start_date and self.end_date:
+            if self.start_date > self.end_date:
+                raise ValidationError({"end_date":"Sales End date must be after Start date"})
+    
         if self.allocate_stock < (self.reserved_stock+self.sold_stock):
             raise ValidationError(
                 "Allocated stock cannot be less than reserved + sold stock."
