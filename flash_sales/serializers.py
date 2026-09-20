@@ -1,11 +1,11 @@
 from django.utils import timezone
 from rest_framework import serializers
 
-from .models import FlashSale
+from .models import FlashSaleItem
 
 class FlashSalesSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FlashSale
+        model = FlashSaleItem
         fields = ['product','flash_price','allocate_stock','start_date','end_date','status']
         read_only_fields = ['status']
         extra_kwargs = {

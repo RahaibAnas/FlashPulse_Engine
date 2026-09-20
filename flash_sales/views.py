@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import ListCreateAPIView,RetrieveUpdateDestroyAPIView
 
-from .models import FlashSale
+from .models import FlashSaleItem
 from .serializers import FlashSalesSerializer
 
 
@@ -21,10 +21,10 @@ def home(request):
     )
 
 class FlashSalesListCreateApiView(ListCreateAPIView):
-    queryset = FlashSale.objects.select_related('product').all()
+    queryset = FlashSaleItem.objects.select_related("product").all()
     serializer_class = FlashSalesSerializer
 
 
 class FlashSalesDetailsApiView(RetrieveUpdateDestroyAPIView):
-    queryset = FlashSale.objects.select_related("product").all()
+    queryset = FlashSaleItem.objects.select_related("product").all()
     serializer_class = FlashSalesSerializer
