@@ -1,14 +1,18 @@
 from django.dispatch import receiver
 from django.db.models.signals import post_save
+
 import json
-from datetime import timedelta
+import datetime
 
 from .models import FlashSaleItem
 from config.redis_cache import r
 
 
 @receiver(signal=post_save,sender=FlashSaleItem)
-def auto_set_task_timer(sender,instance,created,*kwargs):
+def auto_set_task_timer(sender,instance,created,**kwargs):
     if created:
-        dic = {"id":instance.id,"start_date_time":instance.start_date - timedelta(minutes=5) }
-        r.rpush('flash_sale_item_scheduler',json.dumps(dic))
+        date_time = instance.start_date_time
+        print(date_time)
+        r.zadd("flash_sale_item_scheduler",mapping={
+            str(instance.id):date_time.timestamp()
+        })
