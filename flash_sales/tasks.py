@@ -14,12 +14,15 @@ from config.redis_cache import r
 def sale_pre_warming():
     now = timezone.now()
     events = r.zrangebyscore(
-            "flash_sale_item_scheduler", min=0, max=now.timestamp(), withscores=True
-        )
+        "flash_sale_item_scheduler", min=0, max=now.timestamp(), withscores=True
+    )
+    print(events)
     if events:
         event_ids = []
         for pair in events:
             event_ids.append(UUID(pair[0]))
+            
             r.zrem("flash_sale_item_scheduler", pair[0])
-
+        print(event_ids)
         FlashSaleItem.objects.filter(id__in = event_ids).update(status=FlashSaleItem.SaleStatus.ACTIVE)
+        return event_ids

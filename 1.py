@@ -14,18 +14,23 @@ r.delete('task')
 
 # r.delete("tasks_date")
 # past_time = datetime.datetime.now()+datetime.timedelta(minutes=-5)
-# time_list = [(1,4),(2,5),(3,1),(4,2),(5,10)]
+# time_list = [(1,4),(2,6),(3,3),(4,6),(5,10)]
 # for pair in time_list:
 #     time =past_time + datetime.timedelta(minutes=pair[1])
 #     r.zadd(
-#         "tasks_date",
+#         "flash_sale_item_scheduler",
 #         mapping={
 #             pair[0]: time.timestamp()  ,
 #         },
 #     )
 
-now= datetime.datetime.now()
-xyz = r.zrevrangebyscore("tasks_date", min=0, max=now.timestamp(), withscores=True)
-print(xyz)
+# now= datetime.datetime.now()
+# max_time = now.timestamp()
+# xyz = r.zrangebyscore("flash_sale_item_scheduler", min=0, max=max_time, withscores=True)
+# print(xyz)
 
-print((xyz[0][0], datetime.datetime.fromtimestamp(xyz[0][1])) if xyz else None)
+# print(max_time)
+
+# print((xyz[0][0], datetime.datetime.fromtimestamp(xyz[0][1])) if xyz else None)
+# 1790129367
+print(datetime.datetime.fromtimestamp(1790129747))
