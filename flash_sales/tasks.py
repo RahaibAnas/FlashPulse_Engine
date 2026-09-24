@@ -8,6 +8,8 @@ from uuid import UUID
 
 from .models import FlashSaleItem
 from config.redis_cache import r
+from .services import cache_flash_item
+
 
 
 @shared_task
@@ -16,13 +18,11 @@ def sale_pre_warming():
     events = r.zrangebyscore(
         "flash_sale_item_scheduler", min=0, max=now.timestamp(), withscores=True
     )
-    print(events)
     if events:
         event_ids = []
         for pair in events:
             event_ids.append(UUID(pair[0]))
-            
             r.zrem("flash_sale_item_scheduler", pair[0])
-        print(event_ids)
         FlashSaleItem.objects.filter(id__in = event_ids).update(status=FlashSaleItem.SaleStatus.ACTIVE)
+        cache_flash_item(event_ids)
         return event_ids
