@@ -1,10 +1,10 @@
 from django.utils import timezone
 from rest_framework import serializers
-
+from uuid import uuid4
 from .models import FlashSaleItem
 
-
 class FlashSalesSerializer(serializers.ModelSerializer):
+    product = serializers.StringRelatedField()
     class Meta:
         model = FlashSaleItem
         fields = [

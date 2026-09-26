@@ -12,6 +12,10 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     "check_sale_time_every_2_minutes": {
         "task": "flash_sales.tasks.sale_pre_warming",
-        "schedule":120.0
-    }
+        "schedule": 120.0,
+    },
+    "ckeck_sale_end_time_every_minute": {
+        "task": "flash_sales.tasks.item_sale_ender",
+        "schedule": 60.0,
+    },
 }

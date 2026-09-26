@@ -11,9 +11,13 @@ from config.redis_cache import r
 @receiver(signal=post_save,sender=FlashSaleItem)
 def auto_set_task_timer(sender,instance,created,**kwargs):
     if created:
-        date_time = instance.start_date_time + datetime.timedelta(minutes=-5)
+        start_date_time = instance.start_date_time + datetime.timedelta(minutes=-5)
+        end_date_time = instance.end_date_time
         r.zadd("flash_sale_item_scheduler",mapping={
-            str(instance.id):date_time.timestamp()
+            str(instance.id):start_date_time.timestamp()
         })
-        r.zrange("flash_sale_item_scheduler",0,-1,withscores=True)
+
+        r.zadd('flash_sale_end_time_schedular',mapping={
+            str(instance.id): end_date_time.timestamp()
+        })
 
