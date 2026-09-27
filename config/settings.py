@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 from pathlib import Path
+import datetime
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -150,12 +151,41 @@ CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
 
 
-CACHE = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://localhost:6379/2",
-        "OPTION": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-    }
+# CACHE = {
+#     "default": {
+#         "BACKEND": "django_redis.cache.RedisCache",
+#         "LOCATION": "redis://localhost:6379/2",
+#         "OPTION": {
+#             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+#         },
+#     }
+# }
+
+# LOGGING = {
+#     'version':1,
+#     "disable_existing_loggers":False,
+#     "formatters":{
+#         "Verbose":{
+#             'format':(
+#                 "{asctime} | {levelname} | {name} | {message} "
+#             ),
+#             "style":"{"
+#         },
+
+#     },
+
+#     "handlers":{
+#         "file":{
+#             "class":"logging.FileHandler",
+#             "filename":BASE_DIR / "logs" / "application.log",
+#             "formatter":"verbose",
+#         },
+#     },
+
+# }
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=30),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=1),
+    "ROTATE_REFRESH_TOKENS": False,
+    "BLACKLIST_AFTER_ROTATION": True,
 }

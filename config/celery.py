@@ -14,8 +14,12 @@ app.conf.beat_schedule = {
         "task": "flash_sales.tasks.sale_pre_warming",
         "schedule": 120.0,
     },
-    "ckeck_sale_end_time_every_minute": {
+    "check_sale_end_time_every_minute": {
         "task": "flash_sales.tasks.item_sale_ender",
         "schedule": 60.0,
+    },
+    "sync_redis_to_postgres_every_5_secs": {
+        "task": "flash_sales.tasks.sync_redis_to_postgres",
+        "schedule":10.0
     },
 }

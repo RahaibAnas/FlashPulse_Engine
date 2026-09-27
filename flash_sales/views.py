@@ -7,7 +7,7 @@ from rest_framework.generics import ListCreateAPIView,RetrieveUpdateDestroyAPIVi
 
 from .models import FlashSaleItem
 from .serializers import FlashSalesSerializer
-
+from users.permissions import IsadminOrReadonly
 
 # Create your views here.
 @api_view(["GET"])
@@ -23,8 +23,10 @@ def home(request):
 class FlashSalesListCreateApiView(ListCreateAPIView):
     queryset = FlashSaleItem.objects.select_related("product").all()
     serializer_class = FlashSalesSerializer
+    permission_classes = [IsadminOrReadonly]
 
 
 class FlashSalesDetailsApiView(RetrieveUpdateDestroyAPIView):
     queryset = FlashSaleItem.objects.select_related("product").all()
     serializer_class = FlashSalesSerializer
+    permission_classes = [IsadminOrReadonly]

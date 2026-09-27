@@ -2,8 +2,11 @@ from datetime import datetime
 from .models import FlashSaleItem
 from config.redis_cache import r
 
-def cache_flash_item(id_list:list):
-    sale_item_data = FlashSaleItem.objects.filter(id__in = id_list).values()
+def cache_flash_item(id_list:list|None=None,id:None | str=None):
+    if id_list:
+        sale_item_data = FlashSaleItem.objects.filter(id__in = id_list).values()
+    if id:
+        sale_item_data =[FlashSaleItem.objects.filter(id = id).values().first()]
     for obj in sale_item_data:
         redis_key_name = f"FlashSaleItem:{obj.get('id')}"
         mapping={
@@ -19,10 +22,10 @@ def cache_flash_item(id_list:list):
         mapping["end_date_time"] = datetime.isoformat(end)
 
         r.hset(name=redis_key_name,mapping=mapping)
+        r.expire(name=redis_key_name,time = 600)
 
         print(f"item cashe successfully {obj.get('id')}")
 
-def sale_end_date_time_set(id_list:list):
-    pass
+
 
 
