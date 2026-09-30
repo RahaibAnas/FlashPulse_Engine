@@ -2,9 +2,6 @@ from django.utils import timezone
 from django.db import transaction
 
 from celery import shared_task
-
-import json
-from datetime import datetime
 from uuid import UUID
 
 from .models import FlashSaleItem
@@ -45,17 +42,18 @@ def sync_redis_to_postgres():
     redis_keys = r.keys("FlashSaleItem:*")
     if not redis_keys:
         return
-    updates ={}
+    key_id_list = []
     for i in redis_keys:
-        data = r.hmget(i, ["reserved_stock", "sold_stock", "status"])
         id = i.split(":")[1]
-        updates[id] = {"reserved_stock":data[0],"sold_stock":data[1],"status":data[2]}
+        key_id_list.append(id)
 
-    item_to_update = list(FlashSaleItem.objects.filter(id__in=updates.keys()))
+    item_to_update = list(FlashSaleItem.objects.filter(id__in=key_id_list))
     for item in item_to_update:
-        item.reserved_stock = updates[str(item.id)]['reserved_stock']
-        item.sold_stock = updates[str(item.id)]["sold_stock"]
-        item.status = updates[str(item.id)]["sold_stock"]
+        key = f"FlashSaleItem:{item.id}"
+        key_data = r.hmget(key, ["reserved_stock", "sold_stock", "status"])
+        item.reserved_stock = key_data[0]
+        item.sold_stock = key_data[1]
+        item.status = key_data[2]
 
     if item_to_update:
         with transaction.atomic():
