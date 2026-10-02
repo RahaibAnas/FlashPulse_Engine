@@ -16,7 +16,7 @@ User = get_user_model()
 class Order(models.Model):
 
     def get_expire_time():
-        return timezone.now() + timedelta(minutes=5)
+        return timezone.now() + timedelta(minutes=10)
 
     class OrderStatus(models.TextChoices):
         PENDING_PAYMENT = "PENDING_PAYMENT", "PENDING_PAYMENT"

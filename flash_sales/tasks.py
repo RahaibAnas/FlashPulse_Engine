@@ -50,10 +50,12 @@ def sync_redis_to_postgres():
     item_to_update = list(FlashSaleItem.objects.filter(id__in=key_id_list))
     for item in item_to_update:
         key = f"FlashSaleItem:{item.id}"
-        key_data = r.hmget(key, ["reserved_stock", "sold_stock", "status"])
-        item.reserved_stock = key_data[0]
-        item.sold_stock = key_data[1]
-        item.status = key_data[2]
+        reserved_stock, sold_stock, status = r.hmget(
+            key, ["reserved_stock", "sold_stock", "status"]
+        )
+        item.reserved_stock = max(0,int(reserved_stock) if reserved_stock is not None else 0)
+        item.sold_stock = max(0,int(sold_stock) if sold_stock is not None else 0)
+        item.status = status
 
     if item_to_update:
         with transaction.atomic():

@@ -68,13 +68,6 @@ print(list(d))
 # <QuerySet [{'id': UUID('b212f2d8-4632-44ea-af46-bdcc2965e88e'), 'product_id': UUID('0a90b9ff-7abd-4aac-8a30-ec0cbdc97397'), 'flash_price': Decimal('12.00'), 'allocate_stock': 9, 'reserved_stock': 0, 'sold_stock': 0, 'start_date_time': datetime.datetime(2026, 9, 23, 2, 20, 47, tzinfo=datetime.timezone.utc), 'end_date_time': datetime.datetime(2026, 9, 23, 13, 0, tzinfo=datetime.timezone.utc), 'status': 'ACTIVE', 'created_at': datetime.datetime(2026, 9, 23, 2, 11, 59, 565338, tzinfo=datetime.timezone.utc)}]>
 
 
-{
-    "success": true,
-    "message": "User login Successfully",
-    "access token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzkwNDc5MzE4LCJpYXQiOjE3OTA0NzkwMTgsImp0aSI6IjE4NTkxNzEwMjdiOTQ3MWZiYzI2NDBhOGJlYzljOWFiIiwidXNlcl9pZCI6ImQ4M2E3ZmIxLTE2MGEtNGU5MS05OGI1LWMxZDg4ODYwYTU0ZSIsInRva2VuX3ZlcmlmaWVkIjp0cnVlfQ.7-IsGBLZphbhL40U__NMBP4gHTY4BcUHsKnPUyeZwQs",
-    "refresh token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc5MDU2NTQxOCwiaWF0IjoxNzkwNDc5MDE4LCJqdGkiOiI1YWZkMzM3Mzc3ZWY0ZTQwYTI0NDk1YWI4NmJkZDA5NCIsInVzZXJfaWQiOiJkODNhN2ZiMS0xNjBhLTRlOTEtOThiNS1jMWQ4ODg2MGE1NGUiLCJ0b2tlbl92ZXJpZmllZCI6dHJ1ZX0.cOxBEH_LTE6rUKc4JVD21bo2pW3AEIiV7BG5ByzY_r4",
-}
-
 {"email": "meer@gmail.com", "password": "Meer1234"}
 
 {
@@ -82,3 +75,22 @@ print(list(d))
     "quantity": 6,
     "idempotency_key": "12321",
 }
+
+{
+    "success": true,
+    "message": "the order is proceed successfully.you have five minutes to pay this",
+    "data": {
+        "id": "1f6337e7-dcbd-475b-be0d-1a011f4990a7",
+        "quantity": 2,
+        "total_amount": "20.00",
+        "status": "PENDING_PAYMENT",
+        "idempotency_key": "12321",
+        "expires_at": "2026-10-02T10:02:55.678471+05:00",
+        "created_at": "2026-10-02T10:09:21.238098+05:00",
+        "updated_at": "2026-10-02T10:09:21.238213+05:00",
+        "user": "d83a7fb1-160a-4e91-98b5-c1d88860a54e",
+        "flash_sale_item": "e1ab9a82-dfb6-443c-9510-c60fb28117be",
+    },
+}
+
+
